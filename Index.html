@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ha">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="theme-color" content="#080d1b">
+<title>Kundak Academy Podcast</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ background:#080d1b;
+ color:white;
+ font-family:Arial,sans-serif;
+}
+header{
+ padding:22px 18px;
+ background:linear-gradient(135deg,#1d2b50,#080d1b);
+}
+.brand{font-size:24px;font-weight:bold}
+.sub{color:#aab5cf;margin-top:5px}
+
+nav{
+ display:flex;
+ gap:8px;
+ overflow:auto;
+ padding:12px 15px;
+ background:#0e1527;
+ position:sticky;
+ top:0;
+ z-index:5;
+}
+nav button{
+ border:0;
+ border-radius:20px;
+ padding:10px 16px;
+ background:#202c48;
+ color:white;
+}
+nav button.active{
+ background:white;
+ color:#080d1b;
+}
+
+main{
+ max-width:800px;
+ margin:auto;
+ padding:18px 18px 120px;
+}
+
+.hero{
+ padding:24px;
+ border-radius:24px;
+ background:linear-gradient(135deg,#263a68,#121c31);
+ margin-bottom:20px;
+}
+.hero h1{margin:0 0 10px;font-size:29px}
+.hero p{color:#ccd5e8;line-height:1.5}
+
+.search{
+ width:100%;
+ padding:15px;
+ border-radius:15px;
+ border:1px solid #293754;
+ background:#10182b;
+ color:white;
+ font-size:16px;
+ margin-bottom:18px;
+}
+
+.card{
+ display:flex;
+ align-items:center;
+ gap:14px;
+ padding:14px;
+ margin:12px 0;
+ border-radius:18px;
+ background:#121b2f;
+ border:1px solid #273552;
+}
+
+.cover{
+ width:68px;
+ height:68px;
+ border-radius:15px;
+ display:grid;
+ place-items:center;
+ background:linear-gradient(135deg,#7485ff,#a477ff);
+ font-size:28px;
+ flex-shrink:0;
+}
+
+.info{flex:1}
+.info h3{margin:0 0 6px;font-size:17px}
+.info p{margin:0;color:#9daac5;font-size:13px}
+
+.actions{display:flex;gap:7px}
+.btn{
+ width:43px;
+ height:43px;
+ border:0;
+ border-radius:50%;
+ background:white;
+ color:#111827;
+ font-size:17px;
+}
+.fav{
+ background:#27334e;
+ color:white;
+}
+.fav.active{
+ background:#ff5c91;
+}
+
+.player{
+ position:fixed;
+ bottom:0;
+ left:0;
+ right:0;
+ background:#121c31;
+ border-top:1px solid #34415d;
+ padding:12px 17px;
+ z-index:10;
+}
+.player-row{
+ display:flex;
+ align-items:center;
+ gap:10px;
+}
+.player-info{flex:1}
+.player-info b{display:block}
+.player-info small{color:#9daac5}
+
+.player button{
+ border:0;
+ border-radius:12px;
+ padding:10px 14px;
+}
+
+.progress{width:100%}
+
+.empty{
+ text-align:center;
+ color:#8996b2;
+ padding:35px;
+}
+
+footer{
+ text-align:center;
+ color:#66738e;
+ margin-top:35px;
+ font-size:12px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<div class="brand">🎙️ Kundak Academy</div>
+<div class="sub">Podcast • Ilimi • Tattaunawa</div>
+</header>
+
+<nav>
+<button class="active" onclick="showPage('home',this)">Home</button>
+<button onclick="showPage('episodes',this)">Episodes</button>
+<button onclick="showPage('favorites',this)">Favorites</button>
+<button onclick="showPage('profile',this)">Profile</button>
+</nav>
+
+<main id="app"></main>
+
+<div class="player" id="player" style="display:none">
+<div class="player-row">
+<div class="player-info">
+<b id="nowPlaying">Babu podcast</b>
+<small id="timer">00:00 / 00:00</small>
+</div>
+<button onclick="togglePlay()" id="playBtn">▶</button>
+<button onclick="stopAudio()">✕</button>
+</div>
+<input class="progress" id="progress" type="range" min="0" max="100" value="0">
+</div>
+
+<script>
+
+const episodes=[
+{
+ id:1,
+ title:"Ismail & Sani Podcast Interview",
+ desc:"Health Information Management",
+ duration:"30 min",
+ audio:""
+},
+{
+ id:2,
+ title:"Cyber Security a Hausa",
+ desc:"Muhimman abubuwa game da tsaron yanar gizo",
+ duration:"25 min",
+ audio:""
+},
+{
+ id:3,
+ title:"Rayuwa da Nasara",
+ desc:"Tattaunawa kan karatu da makoma",
+ duration:"32 min",
+ audio:""
+},
+{
+ id:4,
+ title:"Kundak Academy Special",
+ desc:"Tambayoyi da amsoshi tare da Ismail",
+ duration:"20 min",
+ audio:""
+}
+];
+
+let favorites=
+JSON.parse(localStorage.getItem("kundakFavorites")||"[]");
+
+let audio=new Audio();
+let current=null;
+
+function card(e){
+
+let active=favorites.includes(e.id);
+
+return `
+<div class="card">
+
+<div class="cover">🎙️</div>
+
+<div class="info">
+<h3>${e.title}</h3>
+<p>${e.desc} • ${e.duration}</p>
+</div>
+
+<div class="actions">
+
+<button class="btn fav ${active?'active':''}"
+onclick="favorite(${e.id})">
+♥
+</button>
+
+<button class="btn"
+onclick="playEpisode(${e.id})">
+▶
+</button>
+
+</div>
+
+</div>
+`;
+}
+
+function showPage(page,button){
+
+document.querySelectorAll("nav button")
+.forEach(b=>b.classList.remove("active"));
+
+if(button)button.classList.add("active");
+
+let list=episodes;
+
+if(page==="favorites"){
+list=episodes.filter(e=>favorites.includes(e.id));
+}
+
+if(page==="profile"){
+
+document.getElementById("app").innerHTML=`
+
+<section class="hero">
+<h1>👤 Profile</h1>
+
+<p>
+Barka da zuwa Kundak Academy Podcast.
+Anan zaka iya sauraron podcast,
+ilimi da tattaunawa masu amfani.
+</p>
+
+</section>
+
+<footer>
+Kundak Academy Podcast © 2026
+</footer>
+`;
+
+return;
+}
+
+document.getElementById("app").innerHTML=`
+
+<section class="hero">
+
+<h1>Maraba da Kundak Academy Podcast</h1>
+
+<p>
+Saurari tattaunawa, ilimi da labarai
+masu amfani daga Ismail da baƙi daban-daban.
+</p>
+
+</section>
+
+<input
+class="search"
+id="search"
+placeholder="🔎 Nemo episode..."
+>
+
+<h2>
+${page==="favorites"?"❤️ Favorites":"🎙️ Sabbin Episodes"}
+</h2>
+
+<div id="episodeList">
+${
+list.length
+?list.map(card).join("")
+:'<div class="empty">Babu episode a nan.</div>'
+}
+</div>
+
+<footer>
+Kundak Academy Podcast © 2026
+</footer>
+`;
+
+document.getElementById("search")
+.addEventListener("input",function(){
+
+let q=this.value.toLowerCase();
+
+let filtered=list.filter(e=>
+(e.title+" "+e.desc)
+.toLowerCase()
+.includes(q)
+);
+
+document.getElementById("episodeList").innerHTML=
+filtered.length
+?filtered.map(card).join("")
+:'<div class="empty">Ba a samu episode ba.</div>';
+
+});
+
+}
+
+function favorite(id){
+
+if(favorites.includes(id)){
+favorites=favorites.filter(x=>x!==id);
+}else{
+favorites.push(id);
+}
+
+localStorage.setItem(
+"kundakFavorites",
+JSON.stringify(favorites)
+);
+
+showPage("home",
+document.querySelector("nav button")
+);
+}
+
+function playEpisode(id){
+
+current=episodes.find(e=>e.id===id);
+
+document.getElementById("player").style.display="block";
+
+document.getElementById("nowPlaying")
+.textContent=current.title;
+
+if(current.audio){
+
+audio.src=current.audio;
+audio.play();
+
+document.getElementById("playBtn")
+.textContent="Ⅱ";
+
+}else{
+
+alert(
+"An shirya Podcast Player. Saka audio URL/MP3 a cikin audio field domin podcast ya fara kunnawa."
+);
+
+}
+
+}
+
+function togglePlay(){
+
+if(!audio.src)return;
+
+if(audio.paused){
+
+audio.play();
+
+document.getElementById("playBtn")
+.textContent="Ⅱ";
+
+}else{
+
+audio.pause();
+
+document.getElementById("playBtn")
+.textContent="▶";
+
+}
+
+}
+
+function stopAudio(){
+
+audio.pause();
+audio.currentTime=0;
+
+document.getElementById("player")
+.style.display="none";
+
+}
+
+audio.ontimeupdate=function(){
+
+if(audio.duration){
+
+document.getElementById("progress").value=
+(audio.currentTime/audio.duration)*100;
+
+document.getElementById("timer").textContent=
+formatTime(audio.currentTime)
++" / "+
+formatTime(audio.duration);
+
+}
+
+};
+
+document.getElementById("progress")
+.addEventListener("input",function(){
+
+if(audio.duration){
+
+audio.currentTime=
+(this.value/100)*audio.duration;
+
+}
+
+});
+
+function formatTime(seconds){
+
+let minutes=Math.floor(seconds/60);
+let sec=Math.floor(seconds%60);
+
+return String(minutes).padStart(2,"0")
++":"+
+String(sec).padStart(2,"0");
+
+}
+
+showPage(
+"home",
+document.querySelector("nav button")
+);
+
+</script>
+
+</body>
+  </html>
+  
